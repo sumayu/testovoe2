@@ -19,7 +19,7 @@ type WalletRepository struct {
 
 func NewWalletRepository(db *sql.DB) *WalletRepository {
 	return &WalletRepository{db: db}
-}
+}	
 
 func (r *WalletRepository) UpdateBalance(ctx context.Context, walletID uuid.UUID, amount float64) error {
     tx, err := r.db.BeginTx(ctx, nil)

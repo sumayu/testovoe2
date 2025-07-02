@@ -6,16 +6,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/sumayu/testovoe2/internal/bd"
 )
 
 func TestRouter(t *testing.T) {
-	db,_:= bd.Database()
-	if db == nil {
-		t.Fatal("Failed to connect to database")
-	}
-	defer db.Close()
-	router := Router(db)
+	
+	router := Router(nil)
 	tests := []struct {
 		name           string
 		method         string
