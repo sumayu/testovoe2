@@ -1,7 +1,7 @@
 docker compose up --build 
 запросы
 post http://localhost:8080/api/v1/wallet
-#зачислить деньги
+//зачислить деньги
 
 {
   "walletId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
@@ -9,7 +9,7 @@ post http://localhost:8080/api/v1/wallet
   "amount": 500.50
 }
 
-#снять деньги
+//снять деньги
 {
   "walletId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
   "operationType": "WITHDRAW",
