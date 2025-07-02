@@ -1,28 +1,70 @@
 package handler
 
-import "github.com/gin-gonic/gin"
+import (
+	"context"
+	"database/sql"
+	"net/http"
 
-//valletId: UUID
-//operationType: DEPOSIT or WITHDRAW,
-//amount: 1000
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/sumayu/testovoe2/internal/dto"
+)
 
-func UpdateWalletBalance(c *gin.Context)  {
-	var req struct {
-		WalletID      string  `json:"walletId"`       
-        OperationType string  `json:"operationType"` 
-        Amount        float64 `json:"amount"`         
-	}
-	err := c.ShouldBind(&req)
-	if err != nil {
-		c.JSON(400, "Incorrect request format")
-	}
-	  if req.OperationType != "DEPOSIT" && req.OperationType != "WITHDRAW" {
-        c.JSON(400, gin.H{"error": "Incorrect operation, available operation: DEPOSIT and WITHDRAW"})
-        return
-    }
-		//to-do сделать в db функцию которая сможет принимать в себя структуру req, сравнить ее данные и изменить сумму
+type WalletHandler struct {
+	walletService WalletService
 }
 
-func GetWalletBalance()  {
-	
+type WalletService interface {
+	ProcessTransaction(ctx context.Context, req dto.BalanceRequest) error
+	GetBalance(ctx context.Context, walletID uuid.UUID) (float64, error)
+}
+
+func NewWalletHandler(walletService WalletService) *WalletHandler {
+	return &WalletHandler{walletService: walletService}
+}
+
+func (h *WalletHandler) UpdateWalletBalance(c *gin.Context) {
+	var req dto.BalanceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Incorrect request format"})
+		return
+	}
+
+	if req.OperationType != "DEPOSIT" && req.OperationType != "WITHDRAW" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Incorrect operation, available operations: DEPOSIT and WITHDRAW",
+		})
+		return
+	}
+
+	if err := h.walletService.ProcessTransaction(c.Request.Context(), req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+
+func (h *WalletHandler) GetWalletBalance(c *gin.Context) {
+	walletUUIDstr := c.Param("id")
+	walletUUID, err := uuid.Parse(walletUUIDstr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid wallet ID format"})
+		return
+	}
+
+	balance, err := h.walletService.GetBalance(c.Request.Context(), walletUUID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Wallet not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get balance"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"wallet_id": walletUUID,
+		"balance":   balance,
+	})
 }

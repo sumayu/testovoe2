@@ -1,25 +1,24 @@
-package api
+	package api
 
-import (
-	"github.com/gin-gonic/gin"
-	"github.com/sumayu/testovoe2/internal/handler"
-)
+	import (
+		"github.com/gin-gonic/gin"
+		"github.com/sumayu/testovoe2/internal/handler"
+		"github.com/sumayu/testovoe2/internal/repository"
+		"github.com/sumayu/testovoe2/internal/service"
+		"database/sql"
+	)
 
-func Router() *gin.Engine {
-	//сделать группы обработчиков api и v1
-// TO-DO сделать обработчик POST api/v1/wallet с json { будет запускаться функция handler.UpdateWalletBalance
-//valletId: UUID,
-//operationType: DEPOSIT or WITHDRAW,
-//amount: 1000
-//} 
-// сделать обработчик GET api/v1/wallets/{WALLET_UUID} ( будет выводить фукнцию из пакета handler.GetWalletBalance)
-r:= gin.Default()
- 
-apiV1:=	r.Group("/api/v1") 
-	{
-
-		apiV1.POST("wallet", handler.UpdateWalletBalance() ) // todo добавить функции
-		apiV1.GET("wallets/:id", handler.GetWalletBalance())
+	func Router(db *sql.DB) *gin.Engine {
+		r := gin.Default()
+		walletRepo := repository.NewWalletRepository(db)
+		walletService := service.NewWalletService(walletRepo)
+		walletHandler := handler.NewWalletHandler(walletService)
+		
+		apiV1 := r.Group("/api/v1")
+		{
+			apiV1.POST("wallet", walletHandler.UpdateWalletBalance)
+			apiV1.GET("wallets/:id", walletHandler.GetWalletBalance)
+		}
+		
+		return r
 	}
-return r
-}

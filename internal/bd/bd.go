@@ -9,44 +9,45 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
-func Database () (*sql.DB)  {
-	err := godotenv.Load("../../configs/config.env")
-	if err != nil {
-		 fmt.Printf("error loading config.env file: %v", err)
-	return nil
+
+func Database() (*sql.DB, error) {
+	configPath := getConfigPath()
+	
+	if err := godotenv.Load(configPath); err != nil {
+		log.Printf("Notice: config file not found at %s, using environment variables only", configPath)
 	}
+
+	user := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	dbname := os.Getenv("POSTGRES_DATABASE")
+	host := os.Getenv("POSTGRES_HOST")
+	port := os.Getenv("POSTGRES_PORT")
+
+	if user == "" || password == "" || dbname == "" || host == "" || port == "" {
+		return nil, fmt.Errorf("missing required database connection parameters")
+	}
+
 	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
-		os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PASSWORD"),
-		os.Getenv("POSTGRES_DATABASE"),
-		os.Getenv("POSTGRES_HOST"),
-		os.Getenv("POSTGRES_PORT"),
-	)
-	fmt.Println("Connecting to database with connection string:",)
-	db, err := sql.Open("postgres",dsn)
+		user, password, dbname, host, port)
+
+	log.Println("Connecting to database with DSN:", dsn)
+
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		 fmt.Printf("failed to connect to database: %v", err)
-		return nil
+		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
-err = db.Ping()
-	if err != nil { fmt.Printf("failed to ping database: %v", err)
-		return nil
+
+	if err = db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to ping database: %v", err)
 	}
-	log.Println("Successfully connected to database")
-	
-	return db
+
+	return db, nil
 }
-	
 
-
-
-
-
-// т.к в условии задачи сказанно о асинхронном выполнении оппераций чтобы избежать состояния гонки нужно обязатльно
-//  в запросах блокировать другие транзакции до зовершения текущей 
-// TO-DO в бд должен быть
-// 1 wallet со своим wallet_uuid (ID нужен для get запроса))
-// нужно создать таблицу WALLETS 
-//функции из handler должны будут импортировать данные отсюда  
-// для get запроса нужна функция которая по wallet_uuid выводит количестно денег. select money from wallets where id = 
-// нашему id 
+func getConfigPath() string {
+	if os.Getenv("IS_DOCKER") == "TRUE" {
+		return "/app/configs/config.env" 
+	}
+	return "./configs/config.env"      
+}
